@@ -87,6 +87,7 @@ var shadowGame = function(){
         shdwGame.resCharacter = {};
         shdwGame.resCharacter.centerLock = blCenterLock;
         shdwGame.resCharacter.speed = intSpeed;
+        shdwGame.resCharacter.speed_multiplier = 1;
         shdwGame.resCharacter.avatar = new shdwGame.sprite({ imagePath:strAvatar, x:0, y:0, width:32, height:32 });
         shdwGame.resCharacter.x = myGame.resCanvas.width / 2;
         shdwGame.resCharacter.y = myGame.resCanvas.height / 2;
@@ -109,21 +110,29 @@ var shadowGame = function(){
         var x = resMoveItem.x;
         var y = resMoveItem.y;
 
+        if(16 in shdwGame.keysDown){ // Player holding up
+            shdwGame.resCharacter.speed_multiplier = 2;
+        }else{
+            shdwGame.resCharacter.speed_multiplier = 1;
+        }
+
+        var intCurrentSpeed = (shdwGame.resCharacter.speed * shdwGame.resCharacter.speed_multiplier);
+
         //Calculate the new positions of the character or everything else
         if(arrKeyOrder[0] in shdwGame.keysDown){ // Player holding up
-            y -= shdwGame.resCharacter.speed * intModifier;
+            y -= intCurrentSpeed * intModifier;
         }
 
         if(arrKeyOrder[1] in shdwGame.keysDown){ // Player holding down
-            y += shdwGame.resCharacter.speed * intModifier;
+            y += intCurrentSpeed * intModifier;
         }
 
         if(arrKeyOrder[2] in shdwGame.keysDown){ // Player holding left
-            x -= shdwGame.resCharacter.speed * intModifier;
+            x -= intCurrentSpeed * intModifier;
         }
 
         if(arrKeyOrder[3] in shdwGame.keysDown){ // Player holding right
-            x += shdwGame.resCharacter.speed * intModifier;
+            x += intCurrentSpeed * intModifier;
         }
 
         if(shdwGame.checkBoundary(x,y)){

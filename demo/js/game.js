@@ -60,7 +60,7 @@
     myGame.setBackgroundLayered("images/tileset.png",ground,layer1);
     //myGame.setBackgroundRepeat("images/background.png");
 
-    myGame.createCharacter(256,"images/hero.png",true);
+    myGame.createCharacter(128,"images/hero.png",true);
 
     var monster = {
         x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),
