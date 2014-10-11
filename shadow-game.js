@@ -35,6 +35,10 @@ var shadowGame = function(){
 
     shdwGame.clear = function(){
         shdwGame.resContext.clearRect(0, 0, shdwGame.resCanvas.width, shdwGame.resCanvas.height);
+
+        shdwGame.resContext.fillRect(25,25,100,100);
+        shdwGame.resContext.clearRect(45,45,60,60);
+        shdwGame.resContext.strokeRect(50,50,50,50);
     }
 
     shdwGame.run = function(){
