@@ -46,7 +46,7 @@
     ];
 
 
-    var myGame = new shadowGame();
+    var myGame = new GameEngine();
     myGame.create(512,480);
     myGame.keyboard();
 
