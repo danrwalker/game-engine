@@ -301,7 +301,7 @@ var GameEngine = function(){
         gAudio.play = function(mxdReference,blForceReplay){
 
             //If the audiofile is currently playing this reset so it can be replayed instantly
-            if(blReplay && !gAudioFiles[mxdReference].paused){
+            if(blForceReplay && !gAudioFiles[mxdReference].paused){
                 gAudioFiles[mxdReference].pause();
                 gAudioFiles[mxdReference].currentTime = 0;
             }
