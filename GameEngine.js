@@ -48,10 +48,6 @@ var GameEngine = function(){
 
     gEngine.clear = function(){
         gEngine.resContext.clearRect(0, 0, gEngine.resCanvas.width, gEngine.resCanvas.height);
-
-        gEngine.resContext.fillRect(25,25,100,100);
-        gEngine.resContext.clearRect(45,45,60,60);
-        gEngine.resContext.strokeRect(50,50,50,50);
     }
 
     gEngine.run = function(){
@@ -248,12 +244,18 @@ var GameEngine = function(){
         };
 
         if(gEngine.resCharacter.centerLock){
+
+            //Fix to allow center locked chars to get to the edge
+            x = x - (myGame.resCanvas.width / 2);
+            y = y - (myGame.resCanvas.height / 2)
+
             if(x > arrPositions.charX || y > arrPositions.charY){
                 blAllowMovement = false;
             }else if((x-(arrPositions.charX+arrPositions.avatarWidth)) + arrPositions.mapWidth < 0 || (y-(arrPositions.charY+arrPositions.avatarHeight)) + arrPositions.mapHeight < 0){
                 blAllowMovement = false;
             }
         }else{
+            
             if(x < 0  || y < 0){
                 blAllowMovement = false;
             }else if(x > (gEngine.map.width - gEngine.resCharacter.avatar.width)  || y > (gEngine.map.height - gEngine.resCharacter.avatar.height)){

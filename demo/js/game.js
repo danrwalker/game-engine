@@ -54,7 +54,8 @@
     myGame.createSprite('tree',{ imagePath:"images/background.png", x:0, y:0, width:32, height:32 });
     myGame.createSprite('monster',{ imagePath:"images/monster.png", x:0, y:0, width:32, height:32 });
 
-    myGame.map(1024,640);
+    //myGame.map(1024,640);
+    myGame.map(2048,1024);
 
     //myGame.setBackground("images/background.png");
     myGame.setBackgroundLayered("images/tileset.png",ground,layer1);
@@ -62,57 +63,71 @@
 
     myGame.createCharacter(4,"images/hero.png",true);
 
+    var treasure = {
+        x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),
+        y: 32 + (Math.random() * (myGame.resCanvas.height - 64))
+    };
+
     var monster = {
         x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),
         y: 32 + (Math.random() * (myGame.resCanvas.height - 64))
     };
-    var monstersCaught = 0;
+
+    var life = 100;
+    var points = 0;
 
     myGame.updateFrame(function(){
 
-        // Are they touching?
-        if(
-            myGame.resCharacter.mapX <= (monster.x + 32)
-                && monster.x <= (myGame.resCharacter.mapX + 32)
-                && myGame.resCharacter.mapY <= (monster.y + 32)
-                && monster.y <= (myGame.resCharacter.mapY + 32)
-            ){
-            ++monstersCaught;
+        if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,treasure.x,treasure.y,32)){
 
-            this.repositionCharacter(this.resCanvas.width / 2,this.resCanvas.height / 2);
+            ++points;
+
+            // Throw the monster somewhere on the screen randomly
+            treasure.x = 32 + (Math.random() * (this.resCanvas.width - 64));
+            treasure.y = 32 + (Math.random() * (this.resCanvas.height - 64));
+        }
+
+        if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,32)){
+
+            life = life - 10;
+            //this.repositionCharacter(this.resCanvas.width / 2,this.resCanvas.height / 2);
 
             // Throw the monster somewhere on the screen randomly
             monster.x = 32 + (Math.random() * (this.resCanvas.width - 64));
             monster.y = 32 + (Math.random() * (this.resCanvas.height - 64));
-        }else{
 
-            //if(monster.follow){
-                if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,120)){
-                    monster = myGame.followCharacter(monster.x,monster.y,3);
-                }
-            //}
+        }else if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,120)){
+            monster = myGame.followCharacter(monster.x,monster.y,3);
         }
 
+        this.sprites['tree'].draw(treasure.x,treasure.y);
         this.sprites['monster'].drawFull(monster.x,monster.y);
 
-        this.sprites['tree'].draw(50,82);
-        this.sprites['tree'].draw(50,82);
-        this.sprites['tree'].draw(50,114);
-        this.sprites['tree'].draw(50,146);
-        this.sprites['tree'].drawSolid(50,178);
+        //this.sprites['tree'].draw(50,82);
+        //this.sprites['tree'].draw(50,82);
+        //this.sprites['tree'].draw(50,114);
+        //this.sprites['tree'].draw(50,146);
+        //this.sprites['tree'].drawSolid(50,178);
 
         // Score
         this.resContext.fillStyle = "rgb(250, 250, 250)";
         this.resContext.font = "16px Helvetica";
         this.resContext.textAlign = "left";
         this.resContext.textBaseline = "top";
-        this.resContext.fillText("Score: " + monstersCaught, 32, 32);
+        this.resContext.fillText("Score: " + points, 32, 32);
+        this.resContext.fillText("Life: " + life, 32, 50);
+
+        if(life <= 0){
+            this.resContext.fillStyle = "rgb(210, 64, 64)";
+            this.resContext.font = "24px Helvetica";
+            this.resContext.fillText("GAME OVER!", (this.resCanvas.width / 2) - 60,this.resCanvas.height / 2);
+        }
 
         //this.resContext.fillText("Player: X " + myGame.resCharacter.mapX + " | Y " + myGame.resCharacter.mapY, 64, 64);
         //this.resContext.fillText("Monster: X " + monster.x + " | Y " + monster.y, 32, 64);
         //this.resContext.fillText("Char: X " + charX + " | Y " + charY, 32, 94);
         //this.resContext.fillText("Diff: X " + difference(charX,monster.x) + " | Y " + difference(charY,monster.y), 32, 94);
-        this.resContext.fillText("Mod: " + this.fpsInterval, 32, 94);
+        //this.resContext.fillText("Mod: " + this.fpsInterval, 32, 94);
 
     });
 
