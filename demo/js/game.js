@@ -45,9 +45,9 @@
         [0, 0, 0, 0, 0, 0, 40, 41, 20, 21, 0, 0, 0, 0, 0, 64, 65, 66, 67, 52, 19, 19, 20, 21]
     ];
 
-
     var myGame = new GameEngine();
-    myGame.create(512,480);
+    myGame.create(512,480,24);
+    //myGame.create(1024,640);
     myGame.keyboard();
 
     myGame.createSprite('grass',{ imagePath:"images/background.png", x:32, y:32, width:32, height:32 });
@@ -60,7 +60,7 @@
     myGame.setBackgroundLayered("images/tileset.png",ground,layer1);
     //myGame.setBackgroundRepeat("images/background.png");
 
-    myGame.createCharacter(128,"images/hero.png",true);
+    myGame.createCharacter(4,"images/hero.png",true);
 
     var monster = {
         x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),
@@ -72,10 +72,10 @@
 
         // Are they touching?
         if(
-            myGame.resCharacter.x <= (monster.x + 32)
-                && monster.x <= (myGame.resCharacter.x + 32)
-                && myGame.resCharacter.y <= (monster.y + 32)
-                && monster.y <= (myGame.resCharacter.y + 32)
+            myGame.resCharacter.mapX <= (monster.x + 32)
+                && monster.x <= (myGame.resCharacter.mapX + 32)
+                && myGame.resCharacter.mapY <= (monster.y + 32)
+                && monster.y <= (myGame.resCharacter.mapY + 32)
             ){
             ++monstersCaught;
 
@@ -84,6 +84,13 @@
             // Throw the monster somewhere on the screen randomly
             monster.x = 32 + (Math.random() * (this.resCanvas.width - 64));
             monster.y = 32 + (Math.random() * (this.resCanvas.height - 64));
+        }else{
+
+            //if(monster.follow){
+                if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,120)){
+                    monster = myGame.followCharacter(monster.x,monster.y,3);
+                }
+            //}
         }
 
         this.sprites['monster'].drawFull(monster.x,monster.y);
@@ -96,10 +103,16 @@
 
         // Score
         this.resContext.fillStyle = "rgb(250, 250, 250)";
-        this.resContext.font = "24px Helvetica";
+        this.resContext.font = "16px Helvetica";
         this.resContext.textAlign = "left";
         this.resContext.textBaseline = "top";
         this.resContext.fillText("Score: " + monstersCaught, 32, 32);
+
+        //this.resContext.fillText("Player: X " + myGame.resCharacter.mapX + " | Y " + myGame.resCharacter.mapY, 64, 64);
+        //this.resContext.fillText("Monster: X " + monster.x + " | Y " + monster.y, 32, 64);
+        //this.resContext.fillText("Char: X " + charX + " | Y " + charY, 32, 94);
+        //this.resContext.fillText("Diff: X " + difference(charX,monster.x) + " | Y " + difference(charY,monster.y), 32, 94);
+        this.resContext.fillText("Mod: " + this.fpsInterval, 32, 94);
 
     });
 

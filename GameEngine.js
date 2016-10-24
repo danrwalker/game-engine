@@ -1,5 +1,5 @@
 /**
- * Game Engine 0.9.0 | Dan Walker - 08/06/2014
+ * Game Engine | Copyright Dan Walker 2016
  */
 var GameEngine = function(){
 
@@ -12,6 +12,13 @@ var GameEngine = function(){
     gEngine.sprites = {};
     gEngine.keysDown = {};
     gEngine.lastFrame = Date.now();
+    gEngine.intModifier = 0.016;
+    gEngine.fps = 0;
+    gEngine.fpsInterval = 0;
+
+    gEngine.startTime = 0;
+    gEngine.lastFrameTime = 0;
+    gEngine.elapsedTime = 0;
 
     //Cross-browser support for requestAnimationFrame
     var requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || window.mozRequestAnimationFrame;
@@ -21,7 +28,7 @@ var GameEngine = function(){
         addEventListener("keyup", function(e){ delete gEngine.keysDown[e.keyCode]; }, false);
     }
 
-    gEngine.create = function(width,height){
+    gEngine.create = function(width,height,frameRate){
 
         // Create the canvas
         gEngine.resCanvas = document.createElement("canvas");
@@ -29,6 +36,12 @@ var GameEngine = function(){
 
         gEngine.resCanvas.width = gEngine.map.width = width;
         gEngine.resCanvas.height = gEngine.map.height = height;
+
+        //Set the framerate of the game, default is 24/fps
+        gEngine.fps = (frameRate == undefined) ? 24 : frameRate;
+        gEngine.fpsInterval = 1000 / gEngine.fps;
+
+        gEngine.lastFrameTime = Date.now();
 
         document.body.appendChild(gEngine.resCanvas);
     }
@@ -43,31 +56,34 @@ var GameEngine = function(){
 
     gEngine.run = function(){
 
-        var currentFrame = Date.now();
-        var delta = currentFrame - gEngine.lastFrame;
-        var intModifier = delta / 1000;
-
-        //Clear the window before redraw
-        gEngine.clear();
-
-        //Update characters position
-        if(gEngine.resCharacter != null){
-            gEngine.moveCharacter(intModifier);
-        }else{
-            //Draw the background for the frame
-            gEngine.backgroundImage.drawFull(0,0);
-        }
-
-        //Redraw the frame if required
-        if(gEngine.resRedrawFunction != null){
-            gEngine.resRedrawFunction();
-        }
-
-        gEngine.lastFrame = currentFrame;
-
         // Request to do this again ASAP
         requestAnimationFrame(gEngine.run.bind(gEngine));
 
+        var currentFrameTime = Date.now();
+        gEngine.elapsedTime = currentFrameTime - gEngine.lastFrameTime;
+
+        if(gEngine.elapsedTime > gEngine.fpsInterval){
+
+            // Get ready for next frame by setting lastFrameTime=currentFrameTime, but also adjust for your
+            // specified fpsInterval not being a multiple of requestAnimationFrame's interval (16.7ms)
+            gEngine.lastFrameTime = currentFrameTime - (gEngine.elapsedTime % gEngine.fpsInterval);
+
+            //Clear the window before redraw
+            gEngine.clear();
+
+            //Update characters position
+            if(gEngine.resCharacter != null){
+                gEngine.moveCharacter();
+            }else{
+                //Draw the background for the frame
+                gEngine.backgroundImage.drawFull(0,0);
+            }
+
+            //Redraw the frame if required
+            if(gEngine.resRedrawFunction != null){
+                gEngine.resRedrawFunction();
+            }
+        }
     }
 
     gEngine.map = function(width,height){
@@ -95,9 +111,11 @@ var GameEngine = function(){
         gEngine.resCharacter.avatar = new gEngine.sprite({ imagePath:strAvatar, x:0, y:0, width:32, height:32 });
         gEngine.resCharacter.x = myGame.resCanvas.width / 2;
         gEngine.resCharacter.y = myGame.resCanvas.height / 2;
+        gEngine.resCharacter.mapX = myGame.resCanvas.height / 2;
+        gEngine.resCharacter.mapY = myGame.resCanvas.height / 2;
     }
 
-    gEngine.moveCharacter = function(intModifier){
+    gEngine.moveCharacter = function(){
 
         var resMoveItem = null;
         var arrKeyOrder = {};
@@ -114,7 +132,7 @@ var GameEngine = function(){
         var x = resMoveItem.x;
         var y = resMoveItem.y;
 
-        if(16 in gEngine.keysDown){ // Player holding up
+        if(16 in gEngine.keysDown){ // Player holding shift
             gEngine.resCharacter.speed_multiplier = 2;
         }else{
             gEngine.resCharacter.speed_multiplier = 1;
@@ -124,19 +142,19 @@ var GameEngine = function(){
 
         //Calculate the new positions of the character or everything else
         if(arrKeyOrder[0] in gEngine.keysDown){ // Player holding up
-            y -= intCurrentSpeed * intModifier;
+            y -= intCurrentSpeed;
         }
 
         if(arrKeyOrder[1] in gEngine.keysDown){ // Player holding down
-            y += intCurrentSpeed * intModifier;
+            y += intCurrentSpeed;
         }
 
         if(arrKeyOrder[2] in gEngine.keysDown){ // Player holding left
-            x -= intCurrentSpeed * intModifier;
+            x -= intCurrentSpeed;
         }
 
         if(arrKeyOrder[3] in gEngine.keysDown){ // Player holding right
-            x += intCurrentSpeed * intModifier;
+            x += intCurrentSpeed;
         }
 
         if(gEngine.checkBoundary(x,y)){
@@ -153,9 +171,13 @@ var GameEngine = function(){
                     gEngine.resCharacter.x - gEngine.positionOffset.x,
                     gEngine.resCharacter.y - gEngine.positionOffset.y
                 )
+                gEngine.resCharacter.mapX = (gEngine.resCharacter.x - gEngine.positionOffset.x)
+                gEngine.resCharacter.mapY = (gEngine.resCharacter.y - gEngine.positionOffset.y)
             }else{
                 gEngine.backgroundImage.drawFull(0,0);
                 resMoveItem.avatar.drawFull(resMoveItem.x,resMoveItem.y)
+                gEngine.resCharacter.mapX = resMoveItem.x
+                gEngine.resCharacter.mapY = resMoveItem.y
             }
         }else{
             (gEngine.resCharacter.centerLock) ? resMoveItem.drawFull(0,0) : gEngine.backgroundImage.drawFull(0,0);
@@ -167,8 +189,47 @@ var GameEngine = function(){
         gEngine.resCharacter.y = y;
     }
 
+    gEngine.followCharacter = function(x,y,speed){
+        return gEngine.follow(x,y,gEngine.resCharacter.mapX,gEngine.resCharacter.mapY,speed);
+    }
+
     gEngine.updateFrame = function(resRedrawFunction){
         gEngine.resRedrawFunction = resRedrawFunction;
+    }
+
+    gEngine.follow = function(x,y,targetX,targetY,speed){
+
+        //Correct the followers position when close to prevent jittering
+        if(targetX <= x + speed && targetX >= x - speed){
+            x = targetX;
+        }
+
+        if(targetY <= y + speed && targetY >= y - speed){
+            y = targetY;
+        }
+
+        //Aim the follower in the direction of the target
+        if(targetX > x){
+            x += speed;
+        }else if(targetX < x){
+            x -= speed;
+        }
+
+        if(targetY > y){
+            y += speed;
+        }else if(targetY < y){
+            y -= speed;
+        }
+
+        return {x: x, y: y};
+    }
+
+    gEngine.checkProximity = function(posX,posY,locationX,locationY,proximityRange){
+        return (gEngine.difference(posX,locationX) < proximityRange && gEngine.difference(posY,locationY) < proximityRange);
+    }
+
+    gEngine.difference = function(a, b){
+        return Math.abs(a - b);
     }
 
     gEngine.checkBoundary = function(x,y){
@@ -176,8 +237,8 @@ var GameEngine = function(){
         var blAllowMovement = true;
 
         var arrPositions = {
-            charX: gEngine.resCharacter.x,
-            charY: gEngine.resCharacter.y,
+            charX: gEngine.resCharacter.mapX,
+            charY: gEngine.resCharacter.mapY,
             avatarWidth: gEngine.resCharacter.avatar.width,
             avatarHeight: gEngine.resCharacter.avatar.height,
             mapWidth: gEngine.map.width,
@@ -254,9 +315,9 @@ var GameEngine = function(){
 
     gEngine.backgroundPattern = function(imagePath){
 
-        var shdwBG = this;
+        var gBackground = this;
 
-        shdwBG.load = function(imagePath){
+        gBackground.load = function(imagePath){
             var resImage = this;
             resImage.image = new Image();
             resImage.image.src = imagePath;
@@ -265,33 +326,33 @@ var GameEngine = function(){
             }
         }
 
-        shdwBG.drawFull = function(x,y){
+        gBackground.drawFull = function(x,y){
 
             x = gEngine.positionOffset.x + x;
             y = gEngine.positionOffset.y + y;
 
             // create pattern
-            var ptrn = gEngine.resContext.createPattern(shdwBG.image, 'repeat'); // Create a pattern with this image, and set it to "repeat".
+            var ptrn = gEngine.resContext.createPattern(gBackground.image, 'repeat'); // Create a pattern with this image, and set it to "repeat".
             gEngine.resContext.fillStyle = ptrn;
             gEngine.resContext.translate(x, y);
             gEngine.resContext.fillRect(-x,-y,gEngine.map.width, gEngine.map.height); // context.fillRect(x, y, width, height);
             gEngine.resContext.translate(-x, -y);
         }
 
-        shdwBG.load(imagePath);
-        shdwBG.x = 0;
-        shdwBG.y = 0;
-        shdwBG.isLoaded = false;
+        gBackground.load(imagePath);
+        gBackground.x = 0;
+        gBackground.y = 0;
+        gBackground.isLoaded = false;
     }
 
     gEngine.backgroundLayers = function(imagePath,ground,layer1){
 
-        var shdwBG = this;
+        var gBackground = this;
 
-        shdwBG.ground = ground;
-        shdwBG.layer1 = layer1;
+        gBackground.ground = ground;
+        gBackground.layer1 = layer1;
 
-        shdwBG.load = function(imagePath){
+        gBackground.load = function(imagePath){
             var resImage = this;
             resImage.image = new Image();
             resImage.image.src = imagePath;
@@ -300,7 +361,7 @@ var GameEngine = function(){
             }
         }
 
-        shdwBG.drawFull = function(x,y){
+        gBackground.drawFull = function(x,y){
 
             x = Math.round(gEngine.positionOffset.x + x);
             y = Math.round(gEngine.positionOffset.y + y);
@@ -312,30 +373,30 @@ var GameEngine = function(){
 
             for (var r = 0; r < rowTileCount; r++) {
                 for (var c = 0; c < colTileCount; c++) {
-                    var tile = shdwBG.ground[ r ][ c ];
+                    var tile = gBackground.ground[ r ][ c ];
 
                     var tileRow = (tile / imageNumTiles) | 0; // Bitwise OR operation
                     var tileCol = (tile % imageNumTiles) | 0;
 
-                    gEngine.resContext.drawImage(shdwBG.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
+                    gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
                 }
             }
 
             for (var r = 0; r < rowTileCount; r++) {
                 for (var c = 0; c < colTileCount; c++) {
-                    var tile = shdwBG.layer1[ r ][ c ];
+                    var tile = gBackground.layer1[ r ][ c ];
 
                     var tileRow = (tile / imageNumTiles) | 0; // Bitwise OR operation
                     var tileCol = (tile % imageNumTiles) | 0;
 
-                    gEngine.resContext.drawImage(shdwBG.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
+                    gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
                 }
             }
         }
 
-        shdwBG.load(imagePath);
-        shdwBG.x = 0;
-        shdwBG.y = 0;
-        shdwBG.isLoaded = false;
+        gBackground.load(imagePath);
+        gBackground.x = 0;
+        gBackground.y = 0;
+        gBackground.isLoaded = false;
     }
 }
