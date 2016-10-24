@@ -19,6 +19,9 @@ var GameEngine = function(){
     gEngine.fps = 0;
     gEngine.fpsInterval = 0;
 
+    gEngine.paused = false;
+    gEngine.pausedTime = 0;
+
     gEngine.defaultFont = "Helvetica";
     gEngine.defaultSize = 16;
     gEngine.defaultColor = "#888888";
@@ -71,21 +74,55 @@ var GameEngine = function(){
             // specified fpsInterval not being a multiple of requestAnimationFrame's interval (16.7ms)
             gEngine.lastFrameTime = currentFrameTime - (gEngine.elapsedTime % gEngine.fpsInterval);
 
-            //Clear the window before redraw
-            gEngine.clear();
+            if(gEngine.paused){
 
-            //Update characters position
-            if(gEngine.resCharacter != null){
-                gEngine.moveCharacter();
+                //Press P to resume the game
+                if(80 in gEngine.keysDown){
+                    gEngine.resume();
+                }
+
             }else{
-                //Draw the background for the frame
-                gEngine.backgroundImage.drawFull(0,0);
-            }
 
-            //Redraw the frame if required
-            if(gEngine.resRedrawFunction != null){
-                gEngine.resRedrawFunction();
+                //Clear the window before redraw
+                gEngine.clear();
+
+                //Update characters position
+                if(gEngine.resCharacter != null){
+                    gEngine.moveCharacter();
+                }else{
+                    //Draw the background for the frame
+                    gEngine.backgroundImage.drawFull(0,0);
+                }
+
+                //Redraw the frame if required
+                if(gEngine.resRedrawFunction != null){
+                    gEngine.resRedrawFunction();
+                }
+
+                //Press P to pause the game
+                if(80 in gEngine.keysDown){
+                    gEngine.pause();
+                }
             }
+        }
+    }
+
+    gEngine.pause = function(){
+
+        if(Date.now() > gEngine.pausedTime + 1000){
+            gEngine.paused = true;
+            gEngine.audio().pauseAll();
+            gEngine.dialog().pause((gEngine.resCanvas.width/2)-120,(gEngine.resCanvas.height/2)-25,240,50);
+            gEngine.pausedTime = Date.now();
+        }
+    }
+
+    gEngine.resume = function(){
+
+        if(Date.now() > gEngine.pausedTime + 1000){
+            gEngine.paused = false;
+            gEngine.audio().resumeAll();
+            gEngine.pausedTime = Date.now();
         }
     }
 
@@ -466,7 +503,7 @@ var GameEngine = function(){
             }
         }
 
-        gDialog.paused = function(x,y,width,height){
+        gDialog.pause = function(x,y,width,height){
             gDialog.draw(x, y, width, height, "Game Paused", null, 24);
         }
 
