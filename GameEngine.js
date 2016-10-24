@@ -10,6 +10,9 @@ var GameEngine = function(){
     gEngine.resRedrawFunction = null;
     gEngine.map = {};
     gEngine.sprites = {};
+    gEngine.objAudio = null;
+    gEngine.objText = null;
+    gEngine.objDialog = null;
     gEngine.keysDown = {};
     gEngine.lastFrame = Date.now();
     gEngine.intModifier = 0.016;
@@ -259,7 +262,7 @@ var GameEngine = function(){
                 blAllowMovement = false;
             }
         }else{
-            
+
             if(x < 0  || y < 0){
                 blAllowMovement = false;
             }else if(x > (gEngine.map.width - gEngine.resCharacter.avatar.width)  || y > (gEngine.map.height - gEngine.resCharacter.avatar.height)){
@@ -268,6 +271,72 @@ var GameEngine = function(){
         }
 
         return blAllowMovement;
+    }
+
+    gEngine.audio = function(){
+
+        if(gEngine.objAudio == null){
+            gEngine.objAudio = new gEngine.audioHandler();
+        }
+
+        return gEngine.objAudio;
+    }
+
+    gEngine.audioHandler = function(){
+
+        var gAudio = this;
+        var gAudioFiles = {};
+
+        gAudio.load = function(mxdReference, audioPath, fltVolume){
+
+            fltVolume = (fltVolume == undefined || fltVolume == null) ? .60 : fltVolume;
+
+            var resAudioFile = new Audio(audioPath);
+            resAudioFile.volume = fltVolume;
+            resAudioFile.load();
+
+            gAudioFiles[mxdReference] = resAudioFile;
+        }
+
+        gAudio.play = function(mxdReference,blForceReplay){
+
+            //If the audiofile is currently playing this reset so it can be replayed instantly
+            if(blReplay && !gAudioFiles[mxdReference].paused){
+                gAudioFiles[mxdReference].pause();
+                gAudioFiles[mxdReference].currentTime = 0;
+            }
+
+            gAudioFiles[mxdReference].play();
+        }
+
+        gAudio.stop = function(mxdReference){
+            gAudioFiles[mxdReference].stop();
+        }
+
+        gAudio.loop = function(mxdReference){
+            gAudioFiles[mxdReference].loop = true;
+            gAudioFiles[mxdReference].play();
+        }
+
+        gAudio.pauseAll = function(){
+
+            //Pause all audio files that are currently playing
+            for(var mxdReference in gAudioFiles){
+                if(gAudioFiles.hasOwnProperty(mxdReference) && gAudioFiles[mxdReference].duration > 0 && !gAudioFiles[mxdReference].paused){
+                    gAudioFiles[mxdReference].pause();
+                }
+            }
+        }
+
+        gAudio.resumeAll = function(){
+
+            //Resume all audio files that have been paused
+            for(var mxdReference in gAudioFiles){
+                if(gAudioFiles.hasOwnProperty(mxdReference) && gAudioFiles[mxdReference].duration > 0 && gAudioFiles[mxdReference].paused){
+                    gAudioFiles[mxdReference].play();
+                }
+            }
+        }
     }
 
     gEngine.createSprite = function(mxdReference,options){
@@ -354,7 +423,12 @@ var GameEngine = function(){
     }
 
     gEngine.dialog = function(){
-        return new gEngine.dialogHandler();
+
+        if(gEngine.objDialog == null){
+            gEngine.objDialog = new gEngine.dialogHandler();
+        }
+
+        return gEngine.objDialog;
     }
 
     gEngine.dialogHandler = function(){
@@ -408,7 +482,12 @@ var GameEngine = function(){
     }
 
     gEngine.text = function(){
-        return new gEngine.textHandler();
+
+        if(gEngine.objText == null){
+            gEngine.objText = new gEngine.textHandler();
+        }
+
+        return gEngine.objText;
     }
 
     gEngine.textHandler = function(){
