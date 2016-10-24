@@ -90,7 +90,6 @@
         if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,32)){
 
             life = life - 10;
-            //this.repositionCharacter(this.resCanvas.width / 2,this.resCanvas.height / 2);
 
             // Throw the monster somewhere on the screen randomly
             monster.x = 32 + (Math.random() * (this.resCanvas.width - 64));
@@ -103,31 +102,16 @@
         this.sprites['tree'].draw(treasure.x,treasure.y);
         this.sprites['monster'].drawFull(monster.x,monster.y);
 
-        //this.sprites['tree'].draw(50,82);
-        //this.sprites['tree'].draw(50,82);
-        //this.sprites['tree'].draw(50,114);
-        //this.sprites['tree'].draw(50,146);
         //this.sprites['tree'].drawSolid(50,178);
 
-        // Score
-        this.resContext.fillStyle = "rgb(250, 250, 250)";
-        this.resContext.font = "16px Helvetica";
-        this.resContext.textAlign = "left";
-        this.resContext.textBaseline = "top";
-        this.resContext.fillText("Score: " + points, 32, 32);
-        this.resContext.fillText("Life: " + life, 32, 50);
+        //Output healthbar and score
+        this.healthBar(life,100,120);
+
+        this.text().draw(10,50,"Score: " + points,16,"white");
 
         if(life <= 0){
-            this.resContext.fillStyle = "rgb(210, 64, 64)";
-            this.resContext.font = "24px Helvetica";
-            this.resContext.fillText("GAME OVER!", (this.resCanvas.width / 2) - 60,this.resCanvas.height / 2);
+            this.dialog().gameover((this.resCanvas.width / 2) - 120,(this.resCanvas.height / 2) - 30,240,60);
         }
-
-        //this.resContext.fillText("Player: X " + myGame.resCharacter.mapX + " | Y " + myGame.resCharacter.mapY, 64, 64);
-        //this.resContext.fillText("Monster: X " + monster.x + " | Y " + monster.y, 32, 64);
-        //this.resContext.fillText("Char: X " + charX + " | Y " + charY, 32, 94);
-        //this.resContext.fillText("Diff: X " + difference(charX,monster.x) + " | Y " + difference(charY,monster.y), 32, 94);
-        //this.resContext.fillText("Mod: " + this.fpsInterval, 32, 94);
 
     });
 

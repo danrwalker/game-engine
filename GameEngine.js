@@ -16,6 +16,10 @@ var GameEngine = function(){
     gEngine.fps = 0;
     gEngine.fpsInterval = 0;
 
+    gEngine.defaultFont = "Helvetica";
+    gEngine.defaultSize = 16;
+    gEngine.defaultColor = "#888888";
+
     gEngine.startTime = 0;
     gEngine.lastFrameTime = 0;
     gEngine.elapsedTime = 0;
@@ -272,9 +276,9 @@ var GameEngine = function(){
 
     gEngine.sprite = function(options){
 
-        var shdwSprite = this;
+        var gSprite = this;
 
-        shdwSprite.load = function(imagePath){
+        gSprite.load = function(imagePath){
             var resImage = this;
             resImage.image = new Image();
             resImage.image.src = imagePath;
@@ -283,36 +287,196 @@ var GameEngine = function(){
             }
         }
 
-        shdwSprite.drawFull = function(x,y){
+        gSprite.drawFull = function(x,y){
 
             x = gEngine.positionOffset.x + x;
             y = gEngine.positionOffset.y + y;
 
-            gEngine.resContext.drawImage(shdwSprite.image,x,y);
+            gEngine.resContext.drawImage(gSprite.image,x,y);
         }
 
-        shdwSprite.draw = function(x,y){
+        gSprite.draw = function(x,y){
 
             x = gEngine.positionOffset.x + x;
             y = gEngine.positionOffset.y + y;
 
-            gEngine.resContext.drawImage(shdwSprite.image, shdwSprite.x, shdwSprite.y, shdwSprite.width, shdwSprite.height, x, y, shdwSprite.width, shdwSprite.height);
+            gEngine.resContext.drawImage(gSprite.image, gSprite.x, gSprite.y, gSprite.width, gSprite.height, x, y, gSprite.width, gSprite.height);
         }
 
-        shdwSprite.drawSolid = function(x,y){
+        gSprite.drawSolid = function(x,y){
 
             x = gEngine.positionOffset.x + x;
             y = gEngine.positionOffset.y + y;
 
-            gEngine.resContext.drawImage(shdwSprite.image, shdwSprite.x, shdwSprite.y, shdwSprite.width, shdwSprite.height, x, y, shdwSprite.width, shdwSprite.height);
+            gEngine.resContext.drawImage(gSprite.image, gSprite.x, gSprite.y, gSprite.width, gSprite.height, x, y, gSprite.width, gSprite.height);
         }
 
-        shdwSprite.load(options.imagePath);
-        shdwSprite.x = options.x;
-        shdwSprite.y = options.y;
-        shdwSprite.width = options.width;
-        shdwSprite.height = options.height;
-        shdwSprite.isLoaded = false;
+        gSprite.load(options.imagePath);
+        gSprite.x = options.x;
+        gSprite.y = options.y;
+        gSprite.width = options.width;
+        gSprite.height = options.height;
+        gSprite.isLoaded = false;
+    }
+
+    gEngine.healthBar = function(health,totalHealth,width){
+
+        width = (width == undefined) ? 120 : width;
+        intPixelsPerPercent = ((width-2) / 100);
+        intLifePercentage = 100/totalHealth * health;
+
+        if(intLifePercentage > 100){
+            intLifePercentage = 100;
+        }else if(intLifePercentage < 0){
+            intLifePercentage = 0;
+        }
+
+        intMeterFill = intLifePercentage * intPixelsPerPercent;
+
+        //Outline lifemeter
+        gEngine.resContext.beginPath();
+        gEngine.resContext.lineWidth="1";
+        gEngine.resContext.strokeStyle="#FFF";
+        gEngine.resContext.rect(10,10,width,20);
+        gEngine.resContext.stroke();
+
+        //Fill remaining life
+        gEngine.resContext.beginPath();
+        gEngine.resContext.fillStyle="rgba(255, 0, 0, 0.5)";
+        gEngine.resContext.fillRect(11,11,width-2,18);
+
+        //Fill remaining life
+        gEngine.resContext.beginPath();
+        gEngine.resContext.fillStyle="green";
+        gEngine.resContext.fillRect(11,11,intMeterFill,18);
+
+        return intLifePercentage;
+    }
+
+    gEngine.dialog = function(){
+        return new gEngine.dialogHandler();
+    }
+
+    gEngine.dialogHandler = function(){
+
+        var gDialog = this;
+
+        gDialog.draw = function(x,y,width,height,title,message,fontSize){
+
+            //Outline Dialog
+            gEngine.resContext.beginPath();
+            gEngine.resContext.lineWidth="1";
+            gEngine.resContext.strokeStyle="#FFF";
+            gEngine.resContext.shadowBlur=20;
+            gEngine.resContext.shadowColor="black";
+            gEngine.resContext.rect(x,y,width,height);
+            gEngine.resContext.stroke();
+
+            //Fill Dialog
+            gEngine.resContext.beginPath();
+            gEngine.resContext.shadowBlur=0;
+            gEngine.resContext.fillStyle="#CAE1FF";
+            gEngine.resContext.fillRect(x+1,y+1,width-2,height-2);
+
+            var messageY = 0;
+
+            if(title != undefined && title != null){
+                //Output the title and push the message down
+                gEngine.text().drawCentered(x + 1, y + (fontSize + 10), width - 2, title, fontSize);
+                messageY = (fontSize + 10) + 6;
+            }
+
+            if(message != undefined && message != null){
+                //Put a 20px margin on the wrapped text
+                gEngine.text().drawWrapped(x + 20, y + messageY, width - 40, message);
+            }
+        }
+
+        gDialog.paused = function(x,y,width,height){
+            gDialog.draw(x, y, width, height, "Game Paused", null, 24);
+        }
+
+        gDialog.gameover = function(x,y,width,height){
+            gDialog.draw(x, y, width, height, "Game Over!", null, 24);
+        }
+
+        gDialog.about = function(x,y,width,height){
+
+            var message = "Game-Engine is a lightweight JS framework to create HTML5 Canvas games, it has been designed to allow a developer to easily create map based, side scrolling and arcade style games.\n\nFind us on GitHub\nhttps://github.com/danrwalker/game-engine\nCopyright 2016 Dan Walker";
+            gDialog.draw(x, y, width, height, "About Game-Engine", message, 24);
+        }
+    }
+
+    gEngine.text = function(){
+        return new gEngine.textHandler();
+    }
+
+    gEngine.textHandler = function(){
+
+        var gText = this;
+
+        gText.set = function(size,color,font){
+
+            size = (size == undefined || size == null) ? gEngine.defaultSize : size;
+            color = (color == undefined || color == null) ? gEngine.defaultColor : color;
+            font = (font == undefined || font == null) ? gEngine.defaultFont : font;
+
+            gEngine.resContext.font=size+"px "+font;
+            gEngine.resContext.fillStyle=color;
+        }
+
+        gText.draw = function(x,y,text,size,color,font){
+
+            gText.set(size,color,font);
+            gEngine.resContext.fillText(text,x,y);
+        }
+
+        gText.drawCentered = function(x,y,width,text,size,color,font){
+
+            gText.set(size,color,font);
+            x = ((width - gEngine.resContext.measureText(text).width) / 2) + x;
+            gEngine.resContext.fillText(text,x,y);
+        }
+
+        gText.drawWrapped = function(x,y,maxWidth,text,lineHeight,size,color,font){
+
+            gText.set(size,color,font);
+
+            var intStartY = y;
+            var strParsedText = text.replace(/\n/g, ' |br| ');
+            var arrWords = strParsedText.split(' ');
+            var strLine = '';
+
+            for(var n = 0; n < arrWords.length; n++) {
+
+                blNewLine = (arrWords[n].indexOf("|br|") > -1);
+
+                var strTestLine = strLine + arrWords[n] + " ";
+                var metrics = maxWidth;
+                var testWidth = maxWidth;
+
+                if(gEngine.resContext.measureText){
+                    metrics = gEngine.resContext.measureText(strTestLine);
+                    testWidth = metrics.width;
+                }
+
+                if((testWidth > maxWidth && n > 0) || blNewLine){
+                    gEngine.resContext.fillText(strLine,x,y);
+                    strLine = (blNewLine) ? "" : arrWords[n] + " ";
+                    y += lineHeight;
+                }else{
+                    strLine = strTestLine;
+                }
+            }
+
+            if(strLine != "" && strLine != " "){
+                gEngine.resContext.fillText(strLine,x,y);
+                y += lineHeight;
+            }
+
+            //Return the height of the overall height of the text added
+            return {startY: intStartY, finishY: y, height: y - intStartY};
+        }
     }
 
     gEngine.backgroundPattern = function(imagePath){
