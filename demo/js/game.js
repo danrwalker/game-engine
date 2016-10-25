@@ -61,7 +61,7 @@
     myGame.setBackgroundLayered("images/tileset.png",ground,layer1);
     //myGame.setBackgroundRepeat("images/background.png");
 
-    myGame.createCharacter(4,"images/hero.png",true);
+    myGame.createCharacter(4,"images/hero.png",false);
 
     var treasure = {
         x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),

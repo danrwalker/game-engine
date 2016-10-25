@@ -15,7 +15,8 @@ var GameEngine = function(){
     gEngine.objDialog = null;
     gEngine.keysDown = {};
     gEngine.lastFrame = Date.now();
-    gEngine.intModifier = 0.016;
+    gEngine.intScrollThreshold = 120;
+
     gEngine.fps = 0;
     gEngine.fpsInterval = 0;
 
@@ -214,8 +215,68 @@ var GameEngine = function(){
                 gEngine.resCharacter.mapX = (gEngine.resCharacter.x - gEngine.positionOffset.x)
                 gEngine.resCharacter.mapY = (gEngine.resCharacter.y - gEngine.positionOffset.y)
             }else{
+
+                if(y == gEngine.resCharacter.mapY){
+                    gEngine.resCharacter.direction = '';
+                }else{
+                    gEngine.resCharacter.direction = (y > gEngine.resCharacter.mapY) ? 'south' : 'north';
+                }
+
+                if(x == gEngine.resCharacter.mapX){
+                    gEngine.resCharacter.direction += '';
+                }else{
+                    gEngine.resCharacter.direction += (gEngine.resCharacter.direction != '') ? '-' : '';
+                    gEngine.resCharacter.direction += (x > gEngine.resCharacter.mapX) ? 'east' : 'west';
+                }
+
+                characterX = resMoveItem.x;
+                characterY = resMoveItem.y;
+
+                intNewOffsetX = resMoveItem.x - (gEngine.resCanvas.width - gEngine.intScrollThreshold)
+                intNewOffsetY = resMoveItem.y - (gEngine.resCanvas.height - gEngine.intScrollThreshold)
+
+                blEdgeRightX = (characterX >= (gEngine.resCanvas.width - gEngine.intScrollThreshold))
+                blEdgeBottomY = (characterY >= (gEngine.resCanvas.height - gEngine.intScrollThreshold))
+
+                blEdgeLeftX = (characterX <= gEngine.intScrollThreshold)
+                blEdgeTopY = (characterY <= gEngine.intScrollThreshold)
+
+                if(blEdgeTopY){
+                    //console.log('top');
+                    //gEngine.positionOffset.y = resMoveItem.y;
+                    //characterY = gEngine.intScrollThreshold;
+                }
+
+                if(blEdgeRightX){
+                    //console.log('right');
+                    gEngine.positionOffset.x = intNewOffsetX;
+
+                    if((gEngine.positionOffset.x + gEngine.resCanvas.width) < gEngine.map.width){
+                        characterX = gEngine.resCanvas.width - gEngine.intScrollThreshold;
+                    }else{
+                        characterX = (gEngine.resCanvas.width - gEngine.intScrollThreshold) + (gEngine.positionOffset.x + gEngine.resCanvas.width) - gEngine.map.width;
+                    }
+                }
+
+                if(blEdgeBottomY){
+                    //console.log('bottom');
+                    gEngine.positionOffset.y = intNewOffsetY
+
+                    if((gEngine.positionOffset.y + gEngine.resCanvas.height) < gEngine.map.height){
+                        characterY = gEngine.resCanvas.height - gEngine.intScrollThreshold;
+                    }else{
+                        characterY = (gEngine.resCanvas.height - gEngine.intScrollThreshold) + (gEngine.positionOffset.y + gEngine.resCanvas.height) - gEngine.map.height;
+                    }
+                }
+
+                if(blEdgeLeftX){
+                    //console.log('left');
+                    //gEngine.positionOffset.x = resMoveItem.x;
+                    //characterX = gEngine.intScrollThreshold;
+                }
+
                 gEngine.backgroundImage.drawFull(0,0);
-                resMoveItem.avatar.drawFull(resMoveItem.x,resMoveItem.y)
+                resMoveItem.avatar.drawFull(characterX,characterY)
                 gEngine.resCharacter.mapX = resMoveItem.x
                 gEngine.resCharacter.mapY = resMoveItem.y
             }
@@ -369,7 +430,7 @@ var GameEngine = function(){
 
             //Resume all audio files that have been paused
             for(var mxdReference in gAudioFiles){
-                if(gAudioFiles.hasOwnProperty(mxdReference) && gAudioFiles[mxdReference].duration > 0 && gAudioFiles[mxdReference].paused){
+                if(gAudioFiles.hasOwnProperty(mxdReference) && gAudioFiles[mxdReference].duration > 0 && gAudioFiles[mxdReference].loop){
                     gAudioFiles[mxdReference].play();
                 }
             }
@@ -395,24 +456,30 @@ var GameEngine = function(){
 
         gSprite.drawFull = function(x,y){
 
-            x = gEngine.positionOffset.x + x;
-            y = gEngine.positionOffset.y + y;
+            if(gEngine.resCharacter.centerLock){
+                x = gEngine.positionOffset.x + x;
+                y = gEngine.positionOffset.y + y;
+            }
 
             gEngine.resContext.drawImage(gSprite.image,x,y);
         }
 
         gSprite.draw = function(x,y){
 
-            x = gEngine.positionOffset.x + x;
-            y = gEngine.positionOffset.y + y;
+            if(gEngine.resCharacter.centerLock){
+                x = gEngine.positionOffset.x + x;
+                y = gEngine.positionOffset.y + y;
+            }
 
             gEngine.resContext.drawImage(gSprite.image, gSprite.x, gSprite.y, gSprite.width, gSprite.height, x, y, gSprite.width, gSprite.height);
         }
 
         gSprite.drawSolid = function(x,y){
 
-            x = gEngine.positionOffset.x + x;
-            y = gEngine.positionOffset.y + y;
+            if(gEngine.resCharacter.centerLock){
+                x = gEngine.positionOffset.x + x;
+                y = gEngine.positionOffset.y + y;
+            }
 
             gEngine.resContext.drawImage(gSprite.image, gSprite.x, gSprite.y, gSprite.width, gSprite.height, x, y, gSprite.width, gSprite.height);
         }
@@ -610,15 +677,23 @@ var GameEngine = function(){
 
         gBackground.drawFull = function(x,y){
 
-            x = gEngine.positionOffset.x + x;
             y = gEngine.positionOffset.y + y;
+            x = gEngine.positionOffset.x + x;
 
             // create pattern
             var ptrn = gEngine.resContext.createPattern(gBackground.image, 'repeat'); // Create a pattern with this image, and set it to "repeat".
             gEngine.resContext.fillStyle = ptrn;
-            gEngine.resContext.translate(x, y);
-            gEngine.resContext.fillRect(-x,-y,gEngine.map.width, gEngine.map.height); // context.fillRect(x, y, width, height);
-            gEngine.resContext.translate(-x, -y);
+
+            //Reverse the direction of the background scroll between center lock and regular
+            if(gEngine.resCharacter.centerLock){
+                gEngine.resContext.translate(x, y);
+                gEngine.resContext.fillRect(-x,-y,gEngine.map.width, gEngine.map.height); // context.fillRect(x, y, width, height);
+                gEngine.resContext.translate(-x, -y);
+            }else{
+                gEngine.resContext.translate(-x, -y);
+                gEngine.resContext.fillRect(x,y,gEngine.map.width, gEngine.map.height); // context.fillRect(x, y, width, height);
+                gEngine.resContext.translate(x, y);
+            }
         }
 
         gBackground.load(imagePath);
@@ -660,7 +735,11 @@ var GameEngine = function(){
                     var tileRow = (tile / imageNumTiles) | 0; // Bitwise OR operation
                     var tileCol = (tile % imageNumTiles) | 0;
 
-                    gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
+                    if(gEngine.resCharacter.centerLock){
+                        gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
+                    }else{
+                        gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)-x, (r * tileSize)-y,tileSize,tileSize);
+                    }
                 }
             }
 
@@ -671,7 +750,11 @@ var GameEngine = function(){
                     var tileRow = (tile / imageNumTiles) | 0; // Bitwise OR operation
                     var tileCol = (tile % imageNumTiles) | 0;
 
-                    gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
+                    if(gEngine.resCharacter.centerLock){
+                        gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)+x, (r * tileSize)+y,tileSize,tileSize);
+                    }else{
+                        gEngine.resContext.drawImage(gBackground.image,(tileCol * tileSize), (tileRow * tileSize), tileSize, tileSize,(c * tileSize)-x, (r * tileSize)-y,tileSize,tileSize);
+                    }
                 }
             }
         }
