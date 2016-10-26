@@ -31,22 +31,256 @@ var GameEngine = function(){
     gEngine.lastFrameTime = 0;
     gEngine.elapsedTime = 0;
 
+    gEngine.keyboardEnabled = false;
+    gEngine.mouseEnabled = false;
+    gEngine.touchEnabled = false;
+
+    gEngine.mouse = {
+        button:'',
+        button_last: '',
+        button_last_startpos: { x: 0, y: 0},
+        button_last_endpos: { x: 0, y: 0},
+        position: { x: 0, y: 0},
+        scroll_last: ''
+    };
+
+    gEngine.touch = {
+        touches:0,
+        last_startpos: { x: 0, y: 0},
+        last_endpos: { x: 0, y: 0},
+        position: { x: 0, y: 0}
+    };
+
     //Cross-browser support for requestAnimationFrame
     var requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || window.mozRequestAnimationFrame;
 
-    gEngine.keyboard = function(){
+    gEngine.addKeyboard = function(){
+        gEngine.keyboardEnabled = true;
         addEventListener("keydown", function(e){ gEngine.keysDown[e.keyCode] = true; }, false);
         addEventListener("keyup", function(e){ delete gEngine.keysDown[e.keyCode]; }, false);
     }
 
+    gEngine.addMouse = function(){
+
+        var mie = (navigator.appName == "Microsoft Internet Explorer");
+        var left = mie ? 1 : 0;
+        var right = 2;
+
+        gEngine.mouseEnabled = true;
+        var canvas = document.getElementById('gameWindow');
+
+        canvas.oncontextmenu = function (e) {
+            e.preventDefault();
+        };
+
+        canvas.addEventListener("mousedown", function (e){
+
+            if(e.button === left){
+                gEngine.mouse.button = 'left';
+            }else if(e.button === right){
+                gEngine.mouse.button = 'right';
+            }
+
+            gEngine.mouse.button_last = gEngine.mouse.button;
+            gEngine.mouse.button_last_startpos = getMousePos(canvas, e);
+
+        }, false);
+
+        canvas.addEventListener("mouseup", function (e){
+
+            if(e.button === left){
+                gEngine.mouse.button = '';
+            }else if(e.button === right){
+                gEngine.mouse.button = '';
+            }
+
+            gEngine.mouse.button_last_endpos = getMousePos(canvas, e);
+
+        }, false);
+
+        canvas.addEventListener("mousemove", function (e){
+
+            gEngine.mouse.position = getMousePos(canvas, e);
+
+        }, false);
+
+        // IE9+, Chrome, Safari, Opera
+        canvas.addEventListener("mousewheel", function (e){
+
+            // cross-browser wheel delta
+            var e = window.event || e; // old IE support
+            var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+
+            gEngine.mouse.scroll_last = (delta == '1') ? 'up' : 'down';
+
+        }, false);
+
+        // Firefox
+        canvas.addEventListener("DOMMouseScroll", function (e){
+
+            // In this case, we’re going to reverse Firefox’s detail value and return either 1 for up or -1 for down:
+            var e = window.event || e; // old IE support
+            var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+
+            gEngine.mouse.scroll_last = (delta == '1') ? 'up' : 'down';
+
+        }, false);
+
+    }
+
+    // Get the position of the mouse relative to the canvas
+    gEngine.getMousePos = function(canvasDom, mouseEvent) {
+        var rect = canvasDom.getBoundingClientRect();
+        return {
+            x: mouseEvent.clientX - rect.left,
+            y: mouseEvent.clientY - rect.top
+        };
+    }
+
+    gEngine.addTouch = function(dispatchMouseEvents){
+
+        gEngine.touchEnabled = true;
+        var canvas = document.getElementById('gameWindow');
+        dispatchMouseEvents = (dispatchMouseEvents == undefined) ? false : true;
+
+        // Prevent scrolling when touching the canvas
+        document.body.addEventListener("touchstart", function (e) {
+            if(e.target == canvas){
+                e.preventDefault();
+            }
+        }, false);
+
+        document.body.addEventListener("touchend", function (e) {
+            if(e.target == canvas){
+                e.preventDefault();
+            }
+        }, false);
+
+        document.body.addEventListener("touchmove", function (e) {
+            if(e.target == canvas){
+                e.preventDefault();
+            }
+        }, false);
+
+        //Setup the touch events
+        canvas.addEventListener("touchstart", function(e){
+
+            //Get the total number of touches
+            gEngine.touch.touches = e.touches.length;
+
+            //Track the main touch (item 0) -- In the future we can add in multi touch tracking by running though the array
+            gEngine.touch.last_startpos = {x: e.touches[0].clientX, y: e.touches[0].clientY }
+            gEngine.touch.position = {x: e.touches[0].clientX, y: e.touches[0].clientY }
+
+            //Pass on to mouse events (optional) so that additional events dont need to be coded
+            if(dispatchMouseEvents){
+
+                var touch = e.touches[0];
+                var mouseEvent = new MouseEvent("mousedown",{
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+
+                canvas.dispatchEvent(mouseEvent);
+            }
+
+        }, false);
+
+        canvas.addEventListener("touchend", function(e){
+
+            //Track the main touch (item 0) -- In the future we can add in multi touch tracking by running though the array
+            gEngine.touch.touches = 0;
+            gEngine.touch.last_endpos = {x: e.touches[0].clientX, y: e.touches[0].clientY }
+            gEngine.touch.position = {x: e.touches[0].clientX, y: e.touches[0].clientY }
+
+            if(dispatchMouseEvents){
+
+                var touch = e.touches[0];
+                var mouseEvent = new MouseEvent("mouseup",{
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+
+                canvas.dispatchEvent(mouseEvent);
+            }
+
+        }, false);
+
+        canvas.addEventListener("touchmove", function(e){
+
+            //Track the main touch (item 0) -- In the future we can add in multi touch tracking by running though the array
+            gEngine.touch.position = {x: e.touches[0].clientX, y: e.touches[0].clientY }
+
+            if(dispatchMouseEvents){
+
+                var touch = e.touches[0];
+                var mouseEvent = new MouseEvent("mousemove",{
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+
+                canvas.dispatchEvent(mouseEvent);
+            }
+
+        }, false);
+    }
+
+    gEngine.getTouchPos = function(canvasDom, touchEvent) {
+        var rect = canvasDom.getBoundingClientRect();
+        return {
+            x: touchEvent.touches[0].clientX - rect.left,
+            y: touchEvent.touches[0].clientY - rect.top
+        };
+    }
+
+    gEngine.windowsize = function(){
+        var w = 0;var h = 0;
+        //IE
+        if(!window.innerWidth){
+            if(!(document.documentElement.clientWidth == 0)){
+                //strict mode
+                w = document.documentElement.clientWidth;h = document.documentElement.clientHeight;
+            } else{
+                //quirks mode
+                w = document.body.clientWidth;h = document.body.clientHeight;
+            }
+        } else {
+            //w3c
+            w = window.innerWidth;h = window.innerHeight;
+        }
+        return {width:w,height:h};
+    }
+
+    gEngine.deviceOS = function(){
+        var useragent = navigator.userAgent;
+
+        if(useragent.match(/Android/i)) {
+            return 'android';
+        } else if(useragent.match(/webOS/i)) {
+            return 'webos';
+        } else if(useragent.match(/iPhone/i)) {
+            return 'iphone';
+        } else if(useragent.match(/iPod/i)) {
+            return 'ipod';
+        } else if(useragent.match(/iPad/i)) {
+            return 'ipad';
+        } else if(useragent.match(/Windows Phone/i)) {
+            return 'windows phone';
+        } else if(useragent.match(/SymbianOS/i)) {
+            return 'symbian';
+        } else if(useragent.match(/RIM/i) || useragent.match(/BB/i)) {
+            return 'blackberry';
+        } else {
+            return false;
+        }
+    }
+
     gEngine.create = function(width,height,frameRate){
 
-        // Create the canvas
-        gEngine.resCanvas = document.createElement("canvas");
-        gEngine.resContext = gEngine.resCanvas.getContext("2d");
+        var sizes = gEngine.windowsize();
 
-        gEngine.resCanvas.width = gEngine.map.width = width;
-        gEngine.resCanvas.height = gEngine.map.height = height;
+        width = (width == undefined || width == null) ? sizes.width : width;
+        height = (height == undefined || height == null) ? sizes.height : height;
 
         //Set the framerate of the game, default is 24/fps
         gEngine.fps = (frameRate == undefined) ? 24 : frameRate;
@@ -54,7 +288,34 @@ var GameEngine = function(){
 
         gEngine.lastFrameTime = Date.now();
 
-        document.body.appendChild(gEngine.resCanvas);
+        document.body.style.cssText = "margin: 0; background-color: #000;";
+
+        //Create a container
+        var container = document.createElement("div");
+        container.id = "gameContainer";
+        container.style.cssText = "position: relative;";
+
+        //Create the canvas -- Add more canvases in the future to minimize redraws
+        gEngine.resCanvas = document.createElement("canvas");
+        gEngine.resCanvas.id = "gameWindow";
+        gEngine.resCanvas.style.cssText = "position: absolute; left: 0; top: 0; z-index: 0;";
+        gEngine.resCanvas.width = gEngine.map.width = width;
+        gEngine.resCanvas.height = gEngine.map.height = height;
+
+        gEngine.resContext = gEngine.resCanvas.getContext("2d");
+
+        if(gEngine.deviceOS() == 'ipad' || gEngine.deviceOS() == 'ipad'){
+            var ipadFixLink = document.createElement("a");
+            ipadFixLink.id = "ipadFix";
+            ipadFixLink.style.cssText = "position: absolute; z-index:100; width:120px; text-align:center; padding:16px; display:block; background-color:#000; color:#FFF;";
+            ipadFixLink.href = "javascript:myGame.audio().ipadFix(); document.getElementById('ipadFix').style.cssText='display:none';";
+            ipadFixLink.innerText = "Enable Audio";
+
+            container.appendChild(ipadFixLink);
+        }
+
+        container.appendChild(gEngine.resCanvas);
+        document.body.appendChild(container);
     }
 
     gEngine.clear = function(){
@@ -86,6 +347,10 @@ var GameEngine = function(){
 
                 //Clear the window before redraw
                 gEngine.clear();
+
+                //if(gEngine.touchEnabled && gEngine.touch.touches > 0){
+                //    gEngine.resCharacter.repositionCharacter(gEngine.touch.position.x,gEngine.touch.position.y);
+                //}
 
                 //Update characters position
                 if(gEngine.resCharacter != null){
@@ -154,6 +419,7 @@ var GameEngine = function(){
         gEngine.resCharacter.y = myGame.resCanvas.height / 2;
         gEngine.resCharacter.mapX = myGame.resCanvas.height / 2;
         gEngine.resCharacter.mapY = myGame.resCanvas.height / 2;
+        gEngine.resCharacter.score = 0;
     }
 
     gEngine.moveCharacter = function(){
@@ -181,20 +447,27 @@ var GameEngine = function(){
 
         var intCurrentSpeed = (gEngine.resCharacter.speed * gEngine.resCharacter.speed_multiplier);
 
+        XPos = 20
+        YPos = (gEngine.resCanvas.height - gEngine.sprites['arrowkeys'].height) - 20;
+
         //Calculate the new positions of the character or everything else
-        if(arrKeyOrder[0] in gEngine.keysDown){ // Player holding up
+        if(arrKeyOrder[0] in gEngine.keysDown ||
+            (gEngine.touch.touches > 0 && gEngine.checkProximity(gEngine.touch.position.x,gEngine.touch.position.y,136,YPos+4,0,0,100,100))){ // Player holding up
             y -= intCurrentSpeed;
         }
 
-        if(arrKeyOrder[1] in gEngine.keysDown){ // Player holding down
+        if(arrKeyOrder[1] in gEngine.keysDown ||
+            (gEngine.touch.touches > 0 && gEngine.checkProximity(gEngine.touch.position.x,gEngine.touch.position.y,140,YPos+118,0,0,96,100))){ // Player holding down
             y += intCurrentSpeed;
         }
 
-        if(arrKeyOrder[2] in gEngine.keysDown){ // Player holding left
+        if(arrKeyOrder[2] in gEngine.keysDown ||
+            (gEngine.touch.touches > 0 && gEngine.checkProximity(gEngine.touch.position.x,gEngine.touch.position.y,34,YPos+118,0,0,96,100))){ // Player holding left
             x -= intCurrentSpeed;
         }
 
-        if(arrKeyOrder[3] in gEngine.keysDown){ // Player holding right
+        if(arrKeyOrder[3] in gEngine.keysDown ||
+            (gEngine.touch.touches > 0 && gEngine.checkProximity(gEngine.touch.position.x,gEngine.touch.position.y,250,YPos+118,0,0,96,100))){ // Player holding right
             x += intCurrentSpeed;
         }
 
@@ -325,8 +598,79 @@ var GameEngine = function(){
         return {x: x, y: y};
     }
 
-    gEngine.checkProximity = function(posX,posY,locationX,locationY,proximityRange){
-        return (gEngine.difference(posX,locationX) < proximityRange && gEngine.difference(posY,locationY) < proximityRange);
+    gEngine.collectableList = [];
+
+    gEngine.collectable = function(spriteReference,respawn,event,x,y){
+
+        width = gEngine.sprites[spriteReference].width;
+        height = gEngine.sprites[spriteReference].height;
+
+        x = (x == null || x == undefined) ? (Math.random() * gEngine.resCanvas.width) - width : x;
+        y = (y == null || y == undefined) ? (Math.random() * gEngine.resCanvas.height) - height : y;
+
+        gEngine.collectableList[gEngine.collectableList.length] = {
+            sprite: spriteReference,
+            respawn: (respawn == null || respawn == undefined) ? false : respawn,
+            event: (event == null || event == undefined) ? function(){} : event,
+            x: x,
+            y: y,
+            width: width,
+            height: height
+        };
+    }
+
+    gEngine.drawCollectables = function(){
+
+        for(var intKey in gEngine.collectableList){
+
+            resEachItem = gEngine.collectableList[intKey];
+
+            if(gEngine.checkProximity(gEngine.resCharacter.mapX,gEngine.resCharacter.mapY,resEachItem.x,resEachItem.y,0,0,resEachItem.width,resEachItem.height)){
+
+                resEachItem.event(gEngine);
+
+                if(resEachItem.respawn){
+                    gEngine.collectableList[intKey]['x'] = (Math.random() * gEngine.resCanvas.width) - resEachItem.width;
+                    gEngine.collectableList[intKey]['y'] = (Math.random() * gEngine.resCanvas.height) - resEachItem.height;
+                }else{
+                    //Remove the item from the list of collectables
+                    delete gEngine.collectableList[intKey];
+                }
+            }
+
+            gEngine.sprites[resEachItem.sprite].draw(resEachItem.x,resEachItem.y);
+        }
+    }
+
+    gEngine.checkProximity = function(posX,posY,locationX,locationY,proximityX,proximityY,width,height){
+
+        var testX,testY = false
+
+        //Match proximityX if proximityY is not test
+        proximityY = (proximityY == null || proximityY == undefined) ? proximityX : proximityY;
+
+        //Assume the area in question is a single point unslee otherwise stated
+        width = (width == null || width == undefined) ? 1 : width;
+        height = (height == null || height == undefined) ? 1 : height;
+
+        var intDiffX = gEngine.difference(posX,locationX);
+        var intDiffY = gEngine.difference(posY,locationY);
+
+        //Test X axis
+        if(width == 1 && intDiffX < proximityX){
+            testX = true;
+        }else if(width > 1 && ((posX <= locationX && intDiffX <= proximityX) || (posX > locationX && intDiffX <= (width + proximityX)))){
+            testX = true;
+        }
+
+        //Test Y Axis
+        if(height == 1 && intDiffY < proximityY){
+            testY = true;
+        }else if(height > 1 && ((posY <= locationY && intDiffY <= proximityY) || (posY > locationY && intDiffY <= (height + proximityY)))){
+            testY = true;
+        }
+
+        return (testX && testY);
     }
 
     gEngine.difference = function(a, b){
@@ -435,6 +779,16 @@ var GameEngine = function(){
                 }
             }
         }
+
+        gAudio.ipadFix = function(){
+
+            //Resume all audio files that have been paused
+            for(var mxdReference in gAudioFiles){
+                gAudioFiles[mxdReference].play();
+                gAudioFiles[mxdReference].pause();
+                gAudioFiles[mxdReference].currentTime = 0;
+            }
+        }
     }
 
     gEngine.createSprite = function(mxdReference,options){
@@ -464,14 +818,22 @@ var GameEngine = function(){
             gEngine.resContext.drawImage(gSprite.image,x,y);
         }
 
-        gSprite.draw = function(x,y){
+        gSprite.draw = function(x,y,opacity){
 
             if(gEngine.resCharacter.centerLock){
                 x = gEngine.positionOffset.x + x;
                 y = gEngine.positionOffset.y + y;
             }
 
+            if(opacity != undefined){
+                gEngine.resContext.globalAlpha = opacity
+            }
+
             gEngine.resContext.drawImage(gSprite.image, gSprite.x, gSprite.y, gSprite.width, gSprite.height, x, y, gSprite.width, gSprite.height);
+
+            if(opacity != undefined){
+                gEngine.resContext.globalAlpha = 1
+            }
         }
 
         gSprite.drawSolid = function(x,y){
