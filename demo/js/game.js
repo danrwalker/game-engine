@@ -45,14 +45,21 @@
         [0, 0, 0, 0, 0, 0, 40, 41, 20, 21, 0, 0, 0, 0, 0, 64, 65, 66, 67, 52, 19, 19, 20, 21]
     ];
 
+
+    var life = 100;
+
     var myGame = new GameEngine();
-    myGame.create(512,480,24);
+    //myGame.create(512,480,24);
     //myGame.create(1024,640);
-    myGame.keyboard();
+    myGame.create(null,null,24);
+    myGame.addKeyboard();
+    myGame.addMouse();
+    myGame.addTouch();
 
     myGame.createSprite('grass',{ imagePath:"images/background.png", x:32, y:32, width:32, height:32 });
     myGame.createSprite('tree',{ imagePath:"images/background.png", x:0, y:0, width:32, height:32 });
     myGame.createSprite('monster',{ imagePath:"images/monster.png", x:0, y:0, width:32, height:32 });
+    myGame.createSprite('arrowkeys',{ imagePath:"images/arrow_keys.png", x:0, y:0, width:332, height:227 });
 
     //myGame.map(1024,640);
     myGame.map(2048,1024);
@@ -63,56 +70,48 @@
 
     myGame.createCharacter(4,"images/hero.png",false);
 
-    var treasure = {
-        x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),
-        y: 32 + (Math.random() * (myGame.resCanvas.height - 64))
-    };
+    myGame.collectable("tree",true,function(g){
+        g.resCharacter.score++;
+        //g.audio().play('cha-ching');
+    });
 
-    var monster = {
-        x: 32 + (Math.random() * (myGame.resCanvas.width - 64)),
-        y: 32 + (Math.random() * (myGame.resCanvas.height - 64))
-    };
+    myGame.collectable("monster",true,function(g){
 
-    var life = 100;
-    var points = 0;
+        life = life - 10;
+
+        /**
+        if(proximity == 32){
+
+            life = life - 10;
+            //g.audio().play('cha-ching');
+
+        }else if(proximity == 120){
+
+            monster = myGame.followCharacter(monster.x,monster.y,3);
+            this.sprites['monster'].drawFull(monster.x,monster.y);
+        }
+        */
+    });
 
     myGame.updateFrame(function(){
 
-        if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,treasure.x,treasure.y,32)){
+        myGame.drawCollectables();
 
-            ++points;
+        if(myGame.deviceOS() == 'ipad'){
 
-            // Throw the monster somewhere on the screen randomly
-            treasure.x = 32 + (Math.random() * (this.resCanvas.width - 64));
-            treasure.y = 32 + (Math.random() * (this.resCanvas.height - 64));
+            XPos = 20
+            YPos = (myGame.resCanvas.height - myGame.sprites['arrowkeys'].height) - 20;
+            myGame.sprites['arrowkeys'].draw(XPos,YPos,0.3);
         }
-
-        if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,32)){
-
-            life = life - 10;
-
-            // Throw the monster somewhere on the screen randomly
-            monster.x = 32 + (Math.random() * (this.resCanvas.width - 64));
-            monster.y = 32 + (Math.random() * (this.resCanvas.height - 64));
-
-        }else if(myGame.checkProximity(myGame.resCharacter.mapX,myGame.resCharacter.mapY,monster.x,monster.y,120)){
-            monster = myGame.followCharacter(monster.x,monster.y,3);
-        }
-
-        this.sprites['tree'].draw(treasure.x,treasure.y);
-        this.sprites['monster'].drawFull(monster.x,monster.y);
-
-        //this.sprites['tree'].drawSolid(50,178);
 
         //Output healthbar and score
-        this.healthBar(life,100,120);
+        myGame.healthBar(life,100,120);
 
-        this.text().draw(10,50,"Score: " + points,16,"white");
+        myGame.text().draw(10,50,"Score: " + myGame.resCharacter.score,16,"white");
 
         if(life <= 0){
-            this.dialog().gameover((this.resCanvas.width / 2) - 120,(this.resCanvas.height / 2) - 30,240,60);
+            myGame.dialog().gameover((myGame.resCanvas.width / 2) - 120,(myGame.resCanvas.height / 2) - 30,240,60);
         }
-
     });
 
     //Run the game
